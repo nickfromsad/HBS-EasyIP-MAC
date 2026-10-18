@@ -21,7 +21,16 @@ final class ScannerModel {
     private(set) var cameras: [Camera] = []
     private(set) var interfaces: [NetworkInterface] = []
     private(set) var isSearching = false
-    var errorMessage: String?
+    private(set) var log: [LogLine] = []
+    var errorMessage: String? {
+        didSet { if let errorMessage { addLog("✗ " + errorMessage) } }
+    }
+
+    struct LogLine: Identifiable {
+        let id = UUID()
+        let time = Date()
+        let text: String
+    }
 
     private var client: EasyIPClient?
     private var searchGeneration = 0
@@ -48,11 +57,24 @@ final class ScannerModel {
         interfaces = client.refreshInterfaces()
         isSearching = true
         defer { if generation == searchGeneration { isSearching = false } }
+        addLog("▶ Search on " + interfaces.map { "\($0.bsdName) \($0.ipv4)/\($0.netmask.prefixLength)" }.joined(separator: ", "))
         do {
             try await client.search()
         } catch {
             errorMessage = error.localizedDescription
+            return
         }
+        guard generation == searchGeneration else { return }
+        let otherSubnet = cameras.filter { status(of: $0) == .otherSubnet }.count
+        let duplicates = cameras.filter { status(of: $0) == .duplicateIP }.count
+        addLog("✓ Found \(cameras.count) device(s)"
+            + (otherSubnet > 0 ? ", \(otherSubnet) in another subnet" : "")
+            + (duplicates > 0 ? ", \(duplicates) with a duplicate IP" : ""))
+    }
+
+    func addLog(_ text: String) {
+        log.append(LogLine(text: text))
+        if log.count > 500 { log.removeFirst(log.count - 500) }
     }
 
     /// Cameras restart their network stack after a change; search again once they are back.
@@ -65,7 +87,15 @@ final class ScannerModel {
 
     func apply(_ settings: NetworkSettings, to camera: Camera) async throws {
         guard let client else { throw ReconfigureError.noInterfaces }
-        try await client.reconfigure(camera, to: settings)
+        let name = camera.title.isEmpty ? camera.model : camera.title
+        addLog("▶ \(name) (\(camera.mac)): \(camera.ipv4) → \(settings.ipv4)/\(settings.netmask.prefixLength) gw \(settings.gateway)")
+        do {
+            try await client.reconfigure(camera, to: settings)
+        } catch {
+            addLog("✗ \(name): no response from camera (20-minute window?)")
+            throw error
+        }
+        addLog("✓ \(name) accepted the new settings")
         interfaces = client.interfaces
         cameras.removeAll { $0.mac == camera.mac }
     }

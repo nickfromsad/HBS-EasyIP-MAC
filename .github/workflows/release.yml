@@ -58,7 +58,7 @@ jobs:
           TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
           PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
         run: |
-          DMG="build/DomeScanner-${GITHUB_REF_NAME#v}.dmg"
+          DMG="build/HBS-EasyIP-MAC-${GITHUB_REF_NAME#v}.dmg"
           xcrun notarytool submit "$DMG" --apple-id "$APPLE_ID" --team-id "$TEAM_ID" --password "$PASSWORD" --wait
           xcrun stapler staple "$DMG"
 
@@ -67,7 +67,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          shasum -a 256 build/DomeScanner-$VERSION.dmg build/DomeScanner-$VERSION.zip > build/SHA256SUMS.txt
+          cd build
+          shasum -a 256 HBS-EasyIP-MAC-$VERSION.dmg HBS-EasyIP-MAC-$VERSION.zip > SHA256SUMS.txt
           gh release create "$GITHUB_REF_NAME" \
-            "build/DomeScanner-$VERSION.dmg" "build/DomeScanner-$VERSION.zip" build/SHA256SUMS.txt \
-            --title "Dome Scanner $VERSION" --generate-notes
+            "HBS-EasyIP-MAC-$VERSION.dmg" "HBS-EasyIP-MAC-$VERSION.zip" SHA256SUMS.txt \
+            --title "HBS // EasyIP MAC $GITHUB_REF_NAME" --generate-notes

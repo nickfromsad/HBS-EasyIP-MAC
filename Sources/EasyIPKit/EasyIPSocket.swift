@@ -12,7 +12,7 @@ public enum EasyIPError: LocalizedError {
             case EADDRINUSE:
                 return "UDP port \(EasyIP.hostPort) is in use by another program. Close other Easy IP tools and try again."
             case EHOSTUNREACH, ENETUNREACH, EPERM, EACCES:
-                return "\(call) failed: \(reason). Check that Dome Scanner is allowed under System Settings → Privacy & Security → Local Network."
+                return "\(call) failed: \(reason). Check that EasyIP MAC is allowed under System Settings → Privacy & Security → Local Network."
             default:
                 return "\(call) failed: \(reason)"
             }

@@ -5,17 +5,17 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Dome Scanner</string>
+	<string>HBS EasyIP MAC</string>
 	<key>CFBundleExecutable</key>
-	<string>DomeScanner</string>
+	<string>EasyIPMac</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
-	<string>io.github.nickfromsad.DomeScanner</string>
+	<string>nl.hofbroadcast.EasyIPMac</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Dome Scanner</string>
+	<string>HBS EasyIP MAC</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -29,9 +29,9 @@
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>MIT License</string>
+	<string>HBS // Hof Broadcast Services · MIT License</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Dome Scanner broadcasts on the local network to find Panasonic PTZ cameras and change their IP settings.</string>
+	<string>EasyIP MAC broadcasts on the local network to find Panasonic PTZ cameras and change their IP settings.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

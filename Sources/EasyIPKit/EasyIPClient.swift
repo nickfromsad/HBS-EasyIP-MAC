@@ -17,7 +17,7 @@ public enum ReconfigureError: LocalizedError {
     }
 }
 
-/// Searches for cameras and changes their network settings. Shared by the app and `domescan`.
+/// Searches for cameras and changes their network settings. Shared by the app and `easyip`.
 @MainActor
 public final class EasyIPClient {
     /// Called for every camera announcement (also repeats for cameras already seen).

@@ -2,21 +2,26 @@ import AppKit
 import SwiftUI
 
 @main
-struct DomeScannerApp: App {
+struct EasyIPMacApp: App {
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
     @State private var model = ScannerModel()
 
     var body: some Scene {
-        Window("Dome Scanner", id: "main") {
+        Window("HBS // EasyIP MAC", id: "main") {
             ContentView()
                 .environment(model)
                 .task { model.start() }
+                .frame(minWidth: 860, minHeight: 560)
         }
-        .defaultSize(width: 1000, height: 520)
+        .windowStyle(.hiddenTitleBar)
+        .defaultSize(width: 1040, height: 680)
         .commands {
             CommandGroup(after: .newItem) {
                 Button("Search for Cameras") { Task { await model.search() } }
                     .keyboardShortcut("r")
+            }
+            CommandGroup(replacing: .help) {
+                Link("HBS // EasyIP MAC Documentation", destination: HBS.helpURL)
             }
         }
     }

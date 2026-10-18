@@ -2,8 +2,8 @@ import EasyIPKit
 import Foundation
 
 let usage = """
-usage: domescan [--time SECONDS]
-       domescan set MAC IP [--mask MASK] [--gateway IP] [--port PORT] [--dns IP] [--dns2 IP]
+usage: easyip [--time SECONDS]
+       easyip set MAC IP [--mask MASK] [--gateway IP] [--port PORT] [--dns IP] [--dns2 IP]
 
 Finds Panasonic PTZ cameras with Easy IP, in any subnet on the local network.
 `set` changes the network settings of the camera with that MAC address

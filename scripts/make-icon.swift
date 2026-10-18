@@ -1,45 +1,53 @@
-// Renders Resources/AppIcon.icns. Only needed when changing the icon:
+// Renders Resources/AppIcon.icns: the HOF Broadcast Services circle from the HBS family
+// (Resources/hbs-logo-256.png, the same logo as the ATEM Auto Switcher) with an "IP" badge
+// in place of "CAM1". Only needed when changing the icon:
 //   swift scripts/make-icon.swift && iconutil -c icns build/AppIcon.iconset -o Resources/AppIcon.icns
 import AppKit
+
+let logo = NSImage(contentsOfFile: "Resources/hbs-logo-256.png")!
+let badgeRed = NSColor(red: 0.882, green: 0.369, blue: 0.353, alpha: 1)
+let logoBlack = NSColor(srgbRed: 0.0157, green: 0.0221, blue: 0.0254, alpha: 1)   // the logo's circle colour
 
 func render(size: CGFloat) -> NSBitmapImageRep {
     let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size), pixelsHigh: Int(size), bitsPerSample: 8,
                                samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
                                bytesPerRow: 0, bitsPerPixel: 0)!
     NSGraphicsContext.saveGraphicsState()
-    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
-    let s = size / 1024
+    let context = NSGraphicsContext(bitmapImageRep: rep)!
+    NSGraphicsContext.current = context
+    context.imageInterpolation = .high
 
-    // macOS icon grid: 824pt rounded square centred on a 1024 canvas.
-    let tile = NSRect(x: 100 * s, y: 100 * s, width: 824 * s, height: 824 * s)
-    let shape = NSBezierPath(roundedRect: tile, xRadius: 185 * s, yRadius: 185 * s)
-    NSGradient(starting: NSColor(red: 0.13, green: 0.16, blue: 0.22, alpha: 1),
-               ending: NSColor(red: 0.04, green: 0.05, blue: 0.08, alpha: 1))!.draw(in: shape, angle: -90)
+    // macOS icon grid: keep the circle inside the standard 824/1024 content area.
+    let inset = size * 100 / 1024
+    let circle = NSRect(x: inset, y: inset, width: size - 2 * inset, height: size - 2 * inset)
+    let unit = circle.width / 256   // one pixel of the 256 px source logo
 
-    // Scanning arcs.
-    let centre = NSPoint(x: 512 * s, y: 470 * s)
-    NSColor(red: 1.0, green: 0.62, blue: 0.10, alpha: 1).setStroke()
-    for (index, radius) in [250.0, 330.0].enumerated() {
-        let arc = NSBezierPath()
-        arc.appendArc(withCenter: centre, radius: radius * s, startAngle: 35, endAngle: 145)
-        arc.lineWidth = 34 * s
-        arc.lineCapStyle = .round
-        NSColor(red: 1.0, green: 0.62, blue: 0.10, alpha: index == 0 ? 1 : 0.55).setStroke()
-        arc.stroke()
-    }
+    // Circle in the logo's own black, then the logo with its original CAM1 badge masked out.
+    logoBlack.setFill()
+    NSBezierPath(ovalIn: circle).fill()
+    // Badge in the source spans x 123…247, y 186…243 (top-down) plus its white border.
+    let badgeInSource = NSRect(x: 115, y: 256 - 251, width: 141, height: 73)
+    let mask = NSBezierPath(rect: circle)
+    mask.append(NSBezierPath(rect: NSRect(x: circle.minX + badgeInSource.minX * unit, y: circle.minY + badgeInSource.minY * unit,
+                                          width: badgeInSource.width * unit, height: badgeInSource.height * unit)))
+    mask.windingRule = .evenOdd
+    NSGraphicsContext.saveGraphicsState()
+    mask.addClip()
+    logo.draw(in: circle)
+    NSGraphicsContext.restoreGraphicsState()
 
-    // Dome camera: base plate, half-sphere dome, lens.
+    // New "IP" badge, same red and white rim as the CAM1 badge, anchored bottom-right.
+    let badge = NSRect(x: circle.minX + 150 * unit, y: circle.minY + 12 * unit, width: 100 * unit, height: 60 * unit)
+    let rim = NSBezierPath(roundedRect: badge.insetBy(dx: -4 * unit, dy: -4 * unit), xRadius: 14 * unit, yRadius: 14 * unit)
     NSColor.white.setFill()
-    NSBezierPath(roundedRect: NSRect(x: 292 * s, y: 250 * s, width: 440 * s, height: 56 * s), xRadius: 28 * s, yRadius: 28 * s).fill()
-    let dome = NSBezierPath()
-    dome.appendArc(withCenter: NSPoint(x: 512 * s, y: 322 * s), radius: 190 * s, startAngle: 0, endAngle: 180)
-    dome.close()
-    dome.fill()
-    let lens = NSPoint(x: 512 * s, y: 410 * s)
-    NSColor(red: 0.06, green: 0.07, blue: 0.10, alpha: 1).setFill()
-    NSBezierPath(ovalIn: NSRect(x: lens.x - 70 * s, y: lens.y - 70 * s, width: 140 * s, height: 140 * s)).fill()
-    NSColor(red: 1.0, green: 0.62, blue: 0.10, alpha: 1).setFill()
-    NSBezierPath(ovalIn: NSRect(x: lens.x - 30 * s, y: lens.y - 30 * s, width: 60 * s, height: 60 * s)).fill()
+    rim.fill()
+    badgeRed.setFill()
+    NSBezierPath(roundedRect: badge, xRadius: 10 * unit, yRadius: 10 * unit).fill()
+    let font = NSFont(name: "Arial Black", size: 40 * unit) ?? .systemFont(ofSize: 40 * unit, weight: .black)
+    let text = NSAttributedString(string: "IP", attributes: [.font: font, .foregroundColor: NSColor.white, .kern: 1.5 * unit])
+    let textSize = text.size()
+    text.draw(at: NSPoint(x: badge.midX - textSize.width / 2, y: badge.midY - textSize.height / 2 + 1 * unit))
+
     NSGraphicsContext.restoreGraphicsState()
     return rep
 }
