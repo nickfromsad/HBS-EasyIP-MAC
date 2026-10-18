@@ -9,7 +9,7 @@ Panasonic's Windows-only *EasyIP Setup Tool Plus*, for broadcast jobs where you 
 where the domes are, even when they sit in a different subnet.
 
 Part of the HBS toolset by [Hof Broadcast Services](https://hofbroadcast.nl), alongside the
-[HBS – ATEM Auto Switcher](https://github.com/nickfromsad/HBS---Atem-Auto-Switcher).
+[HBS // ATEM Auto Switcher](https://github.com/nickfromsad/HBS-Atem-Auto-Switcher).
 
 ---
 

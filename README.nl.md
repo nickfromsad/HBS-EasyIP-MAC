@@ -9,7 +9,7 @@ voor Panasonics *EasyIP Setup Tool Plus*, die alleen voor Windows bestaat. Gemaa
 waar je op een rig inprikt en snel wilt weten waar de domes zitten, ook als ze in een ander subnet staan.
 
 Onderdeel van de HBS-tools van [Hof Broadcast Services](https://hofbroadcast.nl), naast de
-[HBS – ATEM Auto Switcher](https://github.com/nickfromsad/HBS---Atem-Auto-Switcher).
+[HBS // ATEM Auto Switcher](https://github.com/nickfromsad/HBS-Atem-Auto-Switcher).
 
 ---
 
