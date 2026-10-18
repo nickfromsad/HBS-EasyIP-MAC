@@ -17,9 +17,18 @@ func render(size: CGFloat) -> NSBitmapImageRep {
     NSGraphicsContext.current = context
     context.imageInterpolation = .high
 
-    // macOS icon grid: keep the circle inside the standard 824/1024 content area.
-    let inset = size * 100 / 1024
-    let circle = NSRect(x: inset, y: inset, width: size - 2 * inset, height: size - 2 * inset)
+    // macOS icon grid: an 824/1024 rounded square. Icons of any other shape get put on a
+    // white plate by macOS 26, so the HOF circle sits on a dark HBS tile.
+    let px = size / 1024
+    let tile = NSRect(x: 100 * px, y: 100 * px, width: 824 * px, height: 824 * px)
+    let tilePath = NSBezierPath(roundedRect: tile, xRadius: 185 * px, yRadius: 185 * px)
+    NSGradient(starting: NSColor(srgbRed: 0.17, green: 0.17, blue: 0.17, alpha: 1),
+               ending: NSColor(srgbRed: 0.08, green: 0.08, blue: 0.08, alpha: 1))!.draw(in: tilePath, angle: -90)
+    NSColor(white: 1, alpha: 0.08).setStroke()
+    tilePath.lineWidth = 4 * px
+    tilePath.stroke()
+
+    let circle = NSRect(x: 172 * px, y: 196 * px, width: 680 * px, height: 680 * px)
     let unit = circle.width / 256   // one pixel of the 256 px source logo
 
     // Circle in the logo's own black, then the logo with its original CAM1 badge masked out.
@@ -37,7 +46,7 @@ func render(size: CGFloat) -> NSBitmapImageRep {
     NSGraphicsContext.restoreGraphicsState()
 
     // New "IP" badge, same red and white rim as the CAM1 badge, anchored bottom-right.
-    let badge = NSRect(x: circle.minX + 150 * unit, y: circle.minY + 12 * unit, width: 100 * unit, height: 60 * unit)
+    let badge = NSRect(x: circle.minX + 150 * unit, y: circle.minY + 2 * unit, width: 100 * unit, height: 60 * unit)
     let rim = NSBezierPath(roundedRect: badge.insetBy(dx: -4 * unit, dy: -4 * unit), xRadius: 14 * unit, yRadius: 14 * unit)
     NSColor.white.setFill()
     rim.fill()

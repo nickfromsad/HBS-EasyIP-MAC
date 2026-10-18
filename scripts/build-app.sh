@@ -46,11 +46,31 @@ codesign --verify --strict "$APP"
 
 echo "▸ Packaging"
 rm -f build/HBS-EasyIP-MAC-*.dmg build/HBS-EasyIP-MAC-*.zip
-STAGE="$(mktemp -d)"
-cp -R "$APP" "$STAGE/"
-ln -s /Applications "$STAGE/Applications"
-hdiutil create -quiet -volname "HBS EasyIP MAC" -srcfolder "$STAGE" -format UDZO -ov "build/$DIST.dmg"
-rm -rf "$STAGE"
+
+# Styled install window (background, icon positions) via dmgbuild, which needs Python 3.10+:
+# uv if installed, otherwise a venv from a recent enough python3.
+DMGBUILD=()
+if command -v uvx >/dev/null; then
+    DMGBUILD=(uvx --quiet --from dmgbuild==1.6.7 dmgbuild)
+elif python3 -c 'import sys; sys.exit(sys.version_info < (3, 10))' 2>/dev/null; then
+    python3 -m venv build/.venv && build/.venv/bin/pip install --quiet dmgbuild==1.6.7
+    DMGBUILD=(build/.venv/bin/dmgbuild)
+fi
+
+if [[ ${#DMGBUILD[@]} -gt 0 ]]; then
+    swift scripts/make-dmg-background.swift "$VERSION" build/dmg
+    tiffutil -cathidpicheck build/dmg/background.png build/dmg/background@2x.png -out build/dmg/background.tiff
+    "${DMGBUILD[@]}" -s scripts/dmg-settings.py \
+        -D app="$APP" -D background=build/dmg/background.tiff -D icon=Resources/AppIcon.icns \
+        "HBS EasyIP MAC" "build/$DIST.dmg"
+else
+    echo "  (no Python 3.10+ or uv: building a plain .dmg without the styled window)"
+    STAGE="$(mktemp -d)"
+    cp -R "$APP" "$STAGE/"
+    ln -s /Applications "$STAGE/Applications"
+    hdiutil create -quiet -volname "HBS EasyIP MAC" -srcfolder "$STAGE" -format UDZO -ov "build/$DIST.dmg"
+    rm -rf "$STAGE"
+fi
 if [[ "$SIGN_IDENTITY" != "-" ]]; then
     codesign --force --sign "$SIGN_IDENTITY" --timestamp "build/$DIST.dmg"
 fi

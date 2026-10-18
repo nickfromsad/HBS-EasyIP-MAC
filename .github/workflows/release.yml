@@ -24,9 +24,11 @@ jobs:
     env:
       HAS_CERT: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      # uv runs dmgbuild for the styled .dmg window (scripts/dmg-settings.py)
+      - uses: astral-sh/setup-uv@v6
 
       - name: Test
         run: swift test
