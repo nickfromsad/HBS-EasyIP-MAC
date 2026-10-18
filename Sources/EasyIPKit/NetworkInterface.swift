@@ -3,8 +3,9 @@ import Foundation
 import SystemConfiguration
 
 /// An IPv4-capable network port on this Mac, e.g. en7 "USB 10/100/1000 LAN" 10.1.0.2/24.
+/// An interface with several addresses (e.g. an alias added with `ifconfig alias`) appears once per address.
 public struct NetworkInterface: Identifiable, Hashable, Sendable {
-    public var id: String { bsdName }
+    public var id: String { "\(bsdName)/\(ipv4)" }
     public let bsdName: String
     public let displayName: String
     public let ipv4: IPv4

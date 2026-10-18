@@ -4,7 +4,7 @@
 Answers search requests with an announcement and accepts IP changes via the
 request -> ack -> commit handshake, like the AW-HE130 in the reference captures.
 
-Usage:  python3 tools/fake_camera.py [--ip 192.168.0.10] [--mac A8:13:74:00:00:01] [--model UE150] [--title CAM-1]
+Usage:  python3 tools/fake_camera.py [--ip 192.168.0.10] [--mac A8:13:74:00:00:01] [--model UE150] [--title CAM-1] [--locked]
 Run several with different --mac values to simulate a rig of cameras.
 """
 import argparse
@@ -40,8 +40,8 @@ def parse_fields(pkt):
 
 
 class FakeCamera:
-    def __init__(self, mac, ip, mask, gateway, model, title):
-        self.mac, self.model, self.title = mac, model, title
+    def __init__(self, mac, ip, mask, gateway, model, title, locked=False):
+        self.mac, self.model, self.title, self.locked = mac, model, title, locked
         self.ip, self.mask, self.gateway = map(socket.inet_aton, (ip, mask, gateway))
         self.dns, self.port = bytes(8), 80
         self.pending = None
@@ -49,7 +49,8 @@ class FakeCamera:
     def announcement(self, host_mac, host_ip):
         eui64 = bytes([self.mac[0] ^ 2]) + self.mac[1:3] + b"\xff\xfe" + self.mac[3:]
         port = struct.pack(">H", self.port)
-        payload = (bytes.fromhex("00000001020001000100")
+        # Last preamble byte: 0x02 = Easy IP changes locked (20 min after power-on), as seen on real UE150s.
+        payload = (bytes.fromhex("000000010200010001") + (b"\x02" if self.locked else b"\x00")
                    + tlv(0x20, self.ip) + tlv(0x21, self.mask) + tlv(0x22, self.gateway)
                    + tlv(0x23, self.dns) + tlv(0x25, port)
                    + tlv(0x40, bytes.fromhex("fe800000000000") + b"\x00" + eui64)
@@ -69,6 +70,9 @@ class FakeCamera:
             print(f"search from {socket.inet_ntoa(host_ip)}")
             return self.announcement(host_mac, host_ip)
         if pkt[6:12] != self.mac:
+            return None
+        if msg_type == 0x02 and self.locked:
+            print("reconfigure request ignored: Easy IP is locked")
             return None
         if msg_type == 0x02:
             self.pending = parse_fields(pkt)
@@ -90,8 +94,9 @@ def main():
     ap.add_argument("--gateway", default="192.168.0.1")
     ap.add_argument("--model", default="HE130")
     ap.add_argument("--title", help="camera title (default: AW-<model>, like a factory-new camera)")
+    ap.add_argument("--locked", action="store_true", help="behave like a camera powered on >20 min ago (ignores changes)")
     a = ap.parse_args()
-    cam = FakeCamera(bytes.fromhex(a.mac.replace(":", "").replace("-", "")), a.ip, a.mask, a.gateway, a.model, a.title or "AW-" + a.model)
+    cam = FakeCamera(bytes.fromhex(a.mac.replace(":", "").replace("-", "")), a.ip, a.mask, a.gateway, a.model, a.title or "AW-" + a.model, a.locked)
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

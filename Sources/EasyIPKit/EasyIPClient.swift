@@ -20,16 +20,24 @@ public enum ReconfigureError: LocalizedError {
 /// Searches for cameras and changes their network settings. Shared by the app and `easyip`.
 @MainActor
 public final class EasyIPClient {
-    /// Called for every camera announcement (also repeats for cameras already seen).
-    public var onCamera: ((Camera) -> Void)?
+    /// Called for every camera announcement (also repeats for cameras already seen), with the
+    /// network interface the announcement arrived on.
+    public var onCamera: ((Camera, NetworkInterface?) -> Void)?
     public private(set) var interfaces: [NetworkInterface] = []
+
+    /// One address per physical port: a search sent from an alias address would only duplicate
+    /// the one sent from the port's primary address.
+    private var searchInterfaces: [NetworkInterface] {
+        var seen = Set<String>()
+        return interfaces.filter { seen.insert($0.bsdName).inserted }
+    }
 
     private var socket: EasyIPSocket!
     private var acks: [MACAddress: EasyIP.Host] = [:]
 
     public init() throws {
-        socket = try EasyIPSocket { [weak self] message in
-            Task { @MainActor in self?.handle(message) }
+        socket = try EasyIPSocket { [weak self] message, interfaceIndex in
+            Task { @MainActor in self?.handle(message, interfaceIndex: interfaceIndex) }
         }
     }
 
@@ -49,7 +57,7 @@ public final class EasyIPClient {
         let clock = ContinuousClock()
         let end = clock.now + duration
         for _ in 0..<3 {
-            try broadcast { EasyIP.searchRequest(from: $0.host) }
+            try broadcast(via: searchInterfaces) { EasyIP.searchRequest(from: $0.host) }
             try? await Task.sleep(for: .milliseconds(500))
         }
         try? await Task.sleep(until: end, clock: clock)
@@ -62,7 +70,7 @@ public final class EasyIPClient {
         acks[camera.mac] = nil
 
         for _ in 0..<3 {
-            try broadcast { EasyIP.reconfigureRequest(for: camera, settings: settings, from: $0.host) }
+            try broadcast(via: searchInterfaces) { EasyIP.reconfigureRequest(for: camera, settings: settings, from: $0.host) }
             for _ in 0..<15 {
                 try? await Task.sleep(for: .milliseconds(100))
                 guard let host = acks.removeValue(forKey: camera.mac) else { continue }
@@ -76,10 +84,10 @@ public final class EasyIPClient {
         throw ReconfigureError.noResponse
     }
 
-    private func handle(_ message: EasyIP.Message) {
+    private func handle(_ message: EasyIP.Message, interfaceIndex: UInt32?) {
         switch message {
         case let .announcement(camera):
-            onCamera?(camera)
+            onCamera?(camera, searchInterfaces.first { $0.index == interfaceIndex })
         case let .reconfigureAck(camera, host):
             acks[camera] = host
         }

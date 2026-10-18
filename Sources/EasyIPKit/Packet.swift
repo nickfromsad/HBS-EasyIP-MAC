@@ -151,7 +151,8 @@ public enum EasyIP {
         let camera = MACAddress(bytes: bytes[6..<12])
         switch MessageType(rawValue: UInt16(bytes[4]) << 8 | UInt16(bytes[5])) {
         case .announcement:
-            return Camera(mac: camera, fields: fields(in: bytes)).map(Message.announcement)
+            return Camera(mac: camera, fields: fields(in: bytes), statusFlags: bytes[fieldsOffset - 1])
+                .map(Message.announcement)
         case .reconfigureAck:
             let host = Host(mac: MACAddress(bytes: bytes[12..<18]), ipv4: IPv4(bytes: bytes[18..<22]))
             return .reconfigureAck(camera: camera, host: host)
@@ -207,13 +208,22 @@ public struct Camera: Identifiable, Hashable, Sendable {
     public let model: String
     /// Every field from the announcement, keyed by field id. Needed to echo unknown fields back.
     public let rawFields: [UInt16: [UInt8]]
+    /// Last byte of the announcement preamble (offset 57). Not documented anywhere.
+    public let statusFlags: UInt8
+
+    /// EXPERIMENTAL: whether the camera refuses Easy IP changes right now.
+    ///
+    /// On a rig of AW-UE150s that had been on for hours, every camera sent 0x02 here except one
+    /// (00); the 2018 AW-HE130 capture, taken while changes worked, also sent 00. The assumption is
+    /// that bit 1 means "Easy IP setup period expired" (20 minutes after power-on). Unconfirmed.
+    public var easyIPLocked: Bool { statusFlags & 0x02 != 0 }
 
     public var ipv4: IPv4 { settings.ipv4 }
     public var netmask: IPv4 { settings.netmask }
     public var gateway: IPv4 { settings.gateway }
     public var httpPort: UInt16 { settings.httpPort }
 
-    init?(mac: MACAddress, fields: [UInt16: [UInt8]]) {
+    init?(mac: MACAddress, fields: [UInt16: [UInt8]], statusFlags: UInt8 = 0) {
         func ip(_ field: EasyIP.Field) -> IPv4? {
             guard let value = fields[field.rawValue], value.count == 4 else { return nil }
             return IPv4(bytes: value)
@@ -240,5 +250,6 @@ public struct Camera: Identifiable, Hashable, Sendable {
         self.category = categoryAndModel.count == 2 ? categoryAndModel[0] : ""
         self.model = categoryAndModel.last ?? ""
         self.rawFields = fields
+        self.statusFlags = statusFlags
     }
 }

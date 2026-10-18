@@ -28,10 +28,15 @@ address, addressed by its MAC, so it works even when the camera is unreachable o
 - **All network ports at once.** Wi-Fi, USB/Thunderbolt Ethernet, docks
 - **State per camera**: `OK` reachable from this Mac · `SUBNET` in another subnet · `DUP IP` duplicate address
 - **Network Settings**: change IP, subnet mask, gateway, DNS and HTTP port
+- **Join Subnet**: give your Mac an extra IP address in a camera's subnet and reach its web interface,
+  **without changing anything on the camera or the rig**
 - **Move into my subnet**: one click fills in a free address in the subnet of your Mac
 - **Auto IP**: give a batch of new cameras (all `192.168.0.10` out of the box) consecutive addresses
 - **Web interface**: double-click a camera to open it in the browser
+- **Auto search**: keeps searching every few seconds and reports cameras that power on or drop off
+- **Easy IP `OPEN` / `LOCKED`** (beta): shows whether a camera still accepts changes (see the 20-minute rule)
 - **Log**: every search, change and error with a timestamp
+- **Update notice**: the header shows when a newer version is on GitHub
 - **`easyip` command-line tool** included, for scripting or a quick check from Terminal
 
 Tested with AW-UE150, AW-HE130 and the AW-RP120 controller.
@@ -62,11 +67,30 @@ When macOS asks, **allow Local Network access**. Without it no cameras are found
 3. Select a camera and click **Network Settings…**, or select several and click **Auto IP…**.
 4. **Apply** sends the new settings. The camera confirms, and the list refreshes a few seconds later.
 
+### Join Subnet: reach a camera without changing it
+
+A camera in another subnet (tag `SUBNET`) can't be reached from your Mac. Instead of changing the camera's
+IP, select it and click **Join Subnet…** (or double-click it):
+
+- your Mac gets an **extra** IP address in the camera's subnet, on the network port the camera answered on
+  (for example `172.17.100.250/24` next to your own `192.168.10.15`);
+- your own address stays, nothing changes on the camera or the rest of the rig;
+- the extra address is listed under *Network* with a **Remove** button, and is removed automatically when
+  you quit the app (or unplug the cable / restart the Mac).
+
+macOS asks for your administrator password, because changing a network port's addresses requires it.
+Under the hood this is `ifconfig <port> alias <address> netmask <mask>`.
+
 ### The 20-minute rule
 
 Panasonic cameras only accept Easy IP **changes** during the first **20 minutes after power-on**. Searching
 always works. To change settings later: power-cycle the camera, or set *Easy IP Setup accommodate period* to
 *Unlimited* in the camera's web interface (Network settings).
+
+The **Easy IP** column shows `OPEN` or `LOCKED` per camera. This is **beta**: it reads an undocumented
+status bit in the camera's answer (byte 57; `0x02` was set on UE150s that had been on for hours, and clear
+on one other camera of the same rig and in captures where changes succeeded). If you see it contradict reality,
+please open an issue.
 
 ### Command line
 

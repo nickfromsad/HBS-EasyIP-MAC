@@ -94,6 +94,12 @@ struct CameraSettingsSheet: View {
                     }
                 }
 
+                if camera.easyIPLocked {
+                    Text("● This camera reports that Easy IP changes are locked (experimental). It was probably powered on more than 20 minutes ago: power-cycle it, or set “Easy IP Setup accommodate period” to Unlimited in its web interface.")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(HBS.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 if let warning = collisionWarning {
                     StatusDot(text: warning, color: HBS.orange)
                 }

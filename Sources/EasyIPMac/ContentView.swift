@@ -4,11 +4,13 @@ import SwiftUI
 enum ActiveSheet: Identifiable {
     case settings(Camera)
     case autoIP([Camera])
+    case joinSubnet(Camera)
 
     var id: String {
         switch self {
         case let .settings(camera): "settings-\(camera.mac)"
         case let .autoIP(cameras): "auto-" + cameras.map(\.mac.description).joined()
+        case let .joinSubnet(camera): "join-\(camera.mac)"
         }
     }
 }
@@ -26,7 +28,7 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HBSHeader()
+            HBSHeader(update: model.availableUpdate)
             VStack(spacing: 10) {
                 networkGroup
                 camerasGroup
@@ -45,6 +47,8 @@ struct ContentView: View {
             switch sheet {
             case let .settings(camera): CameraSettingsSheet(camera: camera)
             case let .autoIP(cameras): AutoIPSheet(cameras: cameras)
+            case let .joinSubnet(camera):
+                JoinSubnetSheet(camera: camera, suggestion: model.suggestedAlias(for: camera), interface: model.interface(for: camera))
             }
         }
         #if DEBUG
@@ -54,7 +58,11 @@ struct ContentView: View {
             try? await Task.sleep(for: .seconds(4))
             let fakes = rows.filter { $0.mac.bytes.first == 0x02 }
             guard let first = fakes.first else { return }
-            sheet = which == "autoip" ? .autoIP(fakes) : .settings(first)
+            switch which {
+            case "autoip": sheet = .autoIP(fakes)
+            case "join": sheet = .joinSubnet(first)
+            default: sheet = .settings(first)
+            }
         }
         #endif
         .alert("HBS // EasyIP MAC", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
@@ -67,12 +75,13 @@ struct ContentView: View {
     // MARK: Network
 
     private var networkGroup: some View {
-        HBSGroup(title: "Network") {
+        @Bindable var model = model
+        return HBSGroup(title: "Network") {
             HStack(spacing: 14) {
                 if model.interfaces.isEmpty {
                     Text("No network connection").font(.system(size: 12)).foregroundStyle(HBS.label)
                 }
-                ForEach(model.interfaces) { interface in
+                ForEach(model.interfaces.filter { !model.isAlias($0) }) { interface in
                     HStack(spacing: 6) {
                         Text(interface.displayName).foregroundStyle(HBS.text)
                         Text("\(interface.ipv4.description)/\(interface.netmask.prefixLength)")
@@ -82,8 +91,56 @@ struct ContentView: View {
                     .font(.system(size: 12))
                 }
                 Spacer()
+                if let event = model.lastEvent {
+                    Text(event)
+                        .font(.system(size: 12))
+                        .foregroundStyle(HBS.text)
+                        .lineLimit(1)
+                        .transition(.opacity)
+                }
                 searchStatus
             }
+            .animation(.easeInOut(duration: 0.2), value: model.lastEvent)
+
+            ForEach(model.aliases) { alias in
+                HStack(spacing: 8) {
+                    HBSTag(text: "EXTRA IP", color: HBS.green)
+                    Text("\(alias.address.description)/\(alias.netmask.prefixLength)")
+                        .font(.system(size: 12).monospacedDigit())
+                        .foregroundStyle(HBS.text)
+                    Text("on \(alias.bsdName), added by EasyIP MAC so this Mac can reach that subnet")
+                        .font(.system(size: 11))
+                        .foregroundStyle(HBS.label)
+                    Spacer()
+                    Button("Remove") { removeAliases([alias]) }
+                        .buttonStyle(HBSButtonStyle())
+                }
+            }
+
+            HStack(spacing: 8) {
+                Toggle("Auto search every", isOn: $model.autoSearch)
+                    .toggleStyle(.checkbox)
+                    .font(.system(size: 12))
+                    .foregroundStyle(HBS.text)
+                Picker("", selection: $model.autoInterval) {
+                    ForEach([3, 5, 10, 30], id: \.self) { Text("\($0) s").tag($0) }
+                }
+                .labelsHidden()
+                .frame(width: 70)
+                .disabled(!model.autoSearch)
+                Text("Shows cameras as they power on or drop off. Appearing and disappearing cameras are logged.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(HBS.label)
+            }
+        }
+    }
+
+    private func removeAliases(_ list: [SubnetAlias]) {
+        do {
+            try model.removeAliases(list)
+        } catch SubnetAlias.Failure.cancelled {
+        } catch {
+            model.errorMessage = error.localizedDescription
         }
     }
 
@@ -92,6 +149,8 @@ struct ContentView: View {
             StatusDot(text: "Searching…", color: HBS.orange)
         } else if model.cameras.isEmpty {
             StatusDot(text: "No cameras", color: HBS.red)
+        } else if model.autoSearch {
+            StatusDot(text: "\(model.cameras.count) live", color: HBS.green)
         } else {
             StatusDot(text: model.cameras.count == 1 ? "1 device" : "\(model.cameras.count) devices", color: HBS.green)
         }
@@ -114,6 +173,9 @@ struct ContentView: View {
                 Button("Auto IP…") { sheet = .autoIP(selectedCameras) }
                     .disabled(selectedCameras.isEmpty)
                     .help("Give the selected cameras consecutive IP addresses")
+                Button("Join Subnet…") { selectedCameras.first.map { sheet = .joinSubnet($0) } }
+                    .disabled(!(selectedCameras.count == 1 && selectedCameras.first.map { model.status(of: $0) == .otherSubnet } == true))
+                    .help("Give this Mac an extra IP address in the camera's subnet, without changing the camera")
                 Button("Copy IP") { selectedCameras.first.map { copy($0.ipv4.description) } }
                     .disabled(selectedCameras.count != 1)
                 Spacer()
@@ -123,8 +185,12 @@ struct ContentView: View {
                 Text("other subnet").legendStyle()
                 HBSTag(text: "DUP IP", color: HBS.red).padding(.leading, 6)
                 Text("duplicate").legendStyle()
+                HBSTag(text: "LOCKED", color: HBS.label).padding(.leading, 6)
+                Text("beta").legendStyle()
             }
             .buttonStyle(HBSButtonStyle())
+            .lineLimit(1)
+            .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -134,6 +200,16 @@ struct ContentView: View {
                 StatusTag(status: model.status(of: camera))
             }
             .width(min: 50, ideal: 56)
+            TableColumn("Easy IP") { camera in
+                if camera.easyIPLocked {
+                    HBSTag(text: "LOCKED", color: HBS.label)
+                        .help("Experimental: the camera seems to refuse Easy IP changes (more than 20 minutes since power-on). Power-cycle it, or set “Easy IP Setup accommodate period” to Unlimited.")
+                } else {
+                    HBSTag(text: "OPEN", color: HBS.green)
+                        .help("Experimental: the camera seems to accept Easy IP changes right now.")
+                }
+            }
+            .width(min: 56, ideal: 60)
             TableColumn("IP Address", value: \.ipv4) { Text($0.ipv4.description).monospacedDigit() }
                 .width(min: 110, ideal: 120)
             TableColumn("Title", value: \.title)
@@ -161,6 +237,9 @@ struct ContentView: View {
             if cameras.count == 1, let camera = cameras.first {
                 Button("Open Web Interface") { openWeb(camera) }
                 Button("Network Settings…") { sheet = .settings(camera) }
+                if model.status(of: camera) == .otherSubnet {
+                    Button("Join Camera Subnet…") { sheet = .joinSubnet(camera) }
+                }
                 Divider()
                 Button("Copy IP Address") { copy(camera.ipv4.description) }
                 Button("Copy MAC Address") { copy(camera.mac.description) }
@@ -243,7 +322,7 @@ struct ContentView: View {
 
     private func openWeb(_ camera: Camera) {
         if case .otherSubnet = model.status(of: camera) {
-            model.errorMessage = "\(camera.ipv4) is in a different subnet than this Mac, so its web interface cannot be opened. Use Network Settings to move it into your subnet first."
+            sheet = .joinSubnet(camera)
             return
         }
         if let url = model.webURL(for: camera) { openURL(url) }

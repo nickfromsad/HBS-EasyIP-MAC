@@ -10,7 +10,10 @@ struct EasyIPMacApp: App {
         Window("HBS // EasyIP MAC", id: "main") {
             ContentView()
                 .environment(model)
-                .task { model.start() }
+                .task {
+                    appDelegate.model = model
+                    model.start()
+                }
                 .frame(minWidth: 860, minHeight: 560)
         }
         .windowStyle(.hiddenTitleBar)
@@ -28,6 +31,17 @@ struct EasyIPMacApp: App {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    weak var model: ScannerModel?
+
+    /// Removes extra IP addresses added by "Join Subnet" (asks for the password once).
+    @MainActor
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if let model, !model.aliases.isEmpty {
+            try? model.removeAliases(model.aliases)
+        }
+        return .terminateNow
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Needed when started as a bare binary (`swift run`) instead of from the .app bundle.
         NSApp.setActivationPolicy(.regular)

@@ -42,6 +42,7 @@ enum HBS {
 
 /// "//HBS | EasyIP MAC v0.1.0 ……… (?) hofbroadcast.nl"
 struct HBSHeader: View {
+    var update: UpdateCheck.Release?
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -61,6 +62,17 @@ struct HBSHeader: View {
                 .font(.system(size: 10))
                 .foregroundStyle(HBS.faint)
                 .padding(.leading, 8)
+            if let update {
+                Button("Update available: v\(update.version)") { openURL(update.url) }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(HBS.background)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(HBS.green))
+                    .padding(.leading, 12)
+                    .help("Open the download page of the new version")
+            }
             Spacer()
             Button("?") { openURL(HBS.helpURL) }
                 .buttonStyle(HelpButtonStyle())
@@ -114,6 +126,8 @@ struct HBSButtonStyle: ButtonStyle {
             configuration.label
                 .font(.system(size: 12, weight: prominent ? .bold : .regular))
                 .foregroundStyle(prominent && isEnabled ? HBS.background : (isEnabled ? HBS.text : HBS.faint))
+                .lineLimit(1)
+                .fixedSize()
                 .padding(.horizontal, 10)
                 .frame(minHeight: 24)
                 .background(RoundedRectangle(cornerRadius: 3).fill(fill(pressed: configuration.isPressed, hovering: hovering)))

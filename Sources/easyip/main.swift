@@ -41,7 +41,7 @@ func run() async {
     let client: EasyIPClient
     do { client = try EasyIPClient() } catch { fail(error.localizedDescription) }
     var cameras: [MACAddress: Camera] = [:]
-    client.onCamera = { cameras[$0.mac] = $0 }
+    client.onCamera = { camera, _ in cameras[camera.mac] = camera }
 
     let seconds = options["time"].map { require(Double($0), "invalid --time") } ?? 3
     do {

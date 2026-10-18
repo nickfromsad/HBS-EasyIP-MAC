@@ -68,6 +68,8 @@ private enum Capture {
     #expect(camera.title == "AW-HE130")
     #expect(camera.category == "CAM")
     #expect(camera.model == "HE130K")
+    // Captured while the Windows tool could still change it.
+    #expect(!camera.easyIPLocked)
 }
 
 @Test func parsesUE150Announcement() throws {
@@ -82,6 +84,9 @@ private enum Capture {
     #expect(camera.category == "CAM")
     #expect(camera.model == "UE150")
     #expect(camera.httpPort == 80)
+    // Captured hours after power-on.
+    #expect(camera.statusFlags == 0x02)
+    #expect(camera.easyIPLocked)
 }
 
 @Test func reconfigureRequestMatchesWindowsTool() throws {

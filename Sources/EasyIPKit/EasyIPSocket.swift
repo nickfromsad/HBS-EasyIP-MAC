@@ -28,13 +28,16 @@ public enum EasyIPError: LocalizedError {
 public final class EasyIPSocket: @unchecked Sendable {
     private let runFlag = RunFlag()
 
-    /// Called on a background thread for every valid Easy IP message.
-    public init(onMessage: @escaping @Sendable (EasyIP.Message) -> Void) throws {
+    /// Called on a background thread for every valid Easy IP message, with the index of the
+    /// network interface it arrived on (if the kernel reported it).
+    public init(onMessage: @escaping @Sendable (EasyIP.Message, UInt32?) -> Void) throws {
         let fd = try Self.makeSocket()
         do {
             try Self.bind(fd, address: .zero, port: EasyIP.hostPort)
             var timeout = timeval(tv_sec: 0, tv_usec: 250_000)
             setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
+            var on: Int32 = 1
+            setsockopt(fd, IPPROTO_IP, IP_RECVIF, &on, socklen_t(MemoryLayout<Int32>.size))
         } catch {
             close(fd)
             throw error
@@ -43,11 +46,11 @@ public final class EasyIPSocket: @unchecked Sendable {
         let flag = runFlag
         let thread = Thread {
             var buffer = [UInt8](repeating: 0, count: 2048)
+            var control = [UInt8](repeating: 0, count: 256)
             while flag.isRunning {
-                let count = recv(fd, &buffer, buffer.count, 0)
-                guard count > 0 else { continue }
+                guard let (count, interfaceIndex) = Self.receive(fd, into: &buffer, control: &control), count > 0 else { continue }
                 if let message = EasyIP.parse(Array(buffer[0..<count])) {
-                    onMessage(message)
+                    onMessage(message, interfaceIndex)
                 }
             }
             close(fd)
@@ -83,6 +86,40 @@ public final class EasyIPSocket: @unchecked Sendable {
     }
 
     // MARK: - Helpers
+
+    /// recvmsg() that also returns the receiving interface (IP_RECVIF control message).
+    private static func receive(_ fd: Int32, into buffer: inout [UInt8], control: inout [UInt8]) -> (Int, UInt32?)? {
+        buffer.withUnsafeMutableBytes { data in
+            control.withUnsafeMutableBytes { controlBytes in
+                var iov = iovec(iov_base: data.baseAddress, iov_len: data.count)
+                return withUnsafeMutablePointer(to: &iov) { iovPointer in
+                    var header = msghdr()
+                    header.msg_iov = iovPointer
+                    header.msg_iovlen = 1
+                    header.msg_control = controlBytes.baseAddress
+                    header.msg_controllen = socklen_t(controlBytes.count)
+                    let count = recvmsg(fd, &header, 0)
+                    guard count >= 0 else { return nil }
+
+                    var interfaceIndex: UInt32?
+                    var offset = 0
+                    let headerSize = MemoryLayout<cmsghdr>.size
+                    while offset + headerSize <= Int(header.msg_controllen) {
+                        let cmsg = controlBytes.load(fromByteOffset: offset, as: cmsghdr.self)
+                        guard cmsg.cmsg_len >= headerSize else { break }
+                        if cmsg.cmsg_level == IPPROTO_IP && cmsg.cmsg_type == IP_RECVIF {
+                            // Payload is a sockaddr_dl; sdl_index sits at byte 2.
+                            let payload = offset + headerSize
+                            interfaceIndex = UInt32(controlBytes.load(fromByteOffset: payload + 2, as: UInt16.self))
+                        }
+                        // CMSG_ALIGN: 4-byte alignment on Darwin.
+                        offset += (Int(cmsg.cmsg_len) + 3) & ~3
+                    }
+                    return (count, interfaceIndex)
+                }
+            }
+        }
+    }
 
     private static func makeSocket() throws -> Int32 {
         let fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
