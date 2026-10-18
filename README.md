@@ -149,7 +149,6 @@ VERSION=0.1.0 scripts/build-app.sh    # → build/HBS EasyIP MAC.app, .dmg, .zip
 | `Sources/easyip` | command-line tool |
 | `Tests/EasyIPKitTests` | tests against real captured packets |
 | `tools/fake_camera.py` | **simulated camera**, for testing without hardware |
-| `tools/easyip_scan.py` | zero-dependency Python scanner (runs on the Python that ships with macOS) |
 
 Test without cameras:
 
@@ -168,7 +167,6 @@ git tag v0.2.0 && git push origin v0.2.0
 GitHub Actions runs the tests, builds a universal (Apple Silicon + Intel) app and publishes the `.dmg` and `.zip`
 as a GitHub Release. To ship a **signed and notarized** build that opens without warnings, add an Apple Developer
 ID certificate as repository secrets (see [`.github/workflows/release.yml`](.github/workflows/release.yml)).
-A Homebrew cask template is in [`packaging/homebrew`](packaging/homebrew/hbs-easyip-mac.rb).
 
 ### Contributing
 

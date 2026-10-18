@@ -17,4 +17,4 @@ jobs:
       - name: Build app
         run: VERSION=0.0.0-ci UNIVERSAL=1 scripts/build-app.sh
       - name: Check fake camera script
-        run: python3 -m py_compile tools/fake_camera.py tools/easyip_scan.py
+        run: python3 -m py_compile tools/fake_camera.py

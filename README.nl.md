@@ -154,7 +154,6 @@ VERSION=0.1.0 scripts/build-app.sh    # → build/HBS EasyIP MAC.app, .dmg, .zip
 | `Sources/easyip` | terminalcommando |
 | `Tests/EasyIPKitTests` | tests met echte opgenomen pakketten |
 | `tools/fake_camera.py` | **nagebootste camera**, om te testen zonder hardware |
-| `tools/easyip_scan.py` | Python-scanner zonder afhankelijkheden (draait op de Python van macOS zelf) |
 
 Testen zonder camera's:
 
@@ -173,8 +172,7 @@ git tag v0.2.0 && git push origin v0.2.0
 GitHub Actions draait de tests, bouwt de app voor Apple Silicon én Intel en zet de `.dmg` en `.zip` als
 release online. Wil je een **ondertekende en door Apple gecontroleerde** versie die zonder waarschuwing opent,
 voeg dan een Apple Developer ID-certificaat toe als repository secrets (zie
-[`.github/workflows/release.yml`](.github/workflows/release.yml)). Een Homebrew-sjabloon staat in
-[`packaging/homebrew`](packaging/homebrew/hbs-easyip-mac.rb).
+[`.github/workflows/release.yml`](.github/workflows/release.yml)).
 
 ### Bijdragen
 
