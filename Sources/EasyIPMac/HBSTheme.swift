@@ -14,7 +14,7 @@ extension Color {
 
 enum HBS {
     static let appName = "EasyIP MAC"
-    static let helpURL = URL(string: "https://github.com/nickfromsad/HBS---EasyIP-MAC#readme")!
+    static let helpURL = URL(string: "https://github.com/nickfromsad/HBS-EasyIP-MAC#readme")!
     static let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
 
     static let header = Color(hex: 0x141414)

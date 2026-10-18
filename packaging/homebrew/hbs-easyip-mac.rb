@@ -5,10 +5,10 @@ cask "hbs-easyip-mac" do
   version "0.1.0"
   sha256 "REPLACE_WITH_SHA256_OF_THE_DMG"
 
-  url "https://github.com/nickfromsad/HBS---EasyIP-MAC/releases/download/v#{version}/HBS-EasyIP-MAC-#{version}.dmg"
+  url "https://github.com/nickfromsad/HBS-EasyIP-MAC/releases/download/v#{version}/HBS-EasyIP-MAC-#{version}.dmg"
   name "HBS // EasyIP MAC"
   desc "Find Panasonic PTZ cameras on any subnet and change their IP (Easy IP for macOS)"
-  homepage "https://github.com/nickfromsad/HBS---EasyIP-MAC"
+  homepage "https://github.com/nickfromsad/HBS-EasyIP-MAC"
 
   depends_on macos: ">= :sonoma"
 

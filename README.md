@@ -38,7 +38,7 @@ Tested with AW-UE150, AW-HE130 and the AW-RP120 controller.
 
 ## Download
 
-Download `HBS-EasyIP-MAC-x.y.z.dmg` from the [latest release](https://github.com/nickfromsad/HBS---EasyIP-MAC/releases/latest),
+Download `HBS-EasyIP-MAC-x.y.z.dmg` from the [latest release](https://github.com/nickfromsad/HBS-EasyIP-MAC/releases/latest),
 open it and drag **HBS EasyIP MAC** to Applications. Requires macOS 14 (Sonoma) or newer, Apple Silicon or Intel.
 
 **First launch.** The app is not notarized by Apple (yet), so macOS blocks the first launch. Open **System
