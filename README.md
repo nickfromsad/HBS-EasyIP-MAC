@@ -1,5 +1,7 @@
 # HBS // EasyIP MAC
 
+**English** · [Nederlands](README.nl.md)
+
 <img src="docs/icon.png" width="128" alt="HBS EasyIP MAC icon" align="right">
 
 Find Panasonic PTZ cameras on the network and change their IP address, from a Mac. A macOS alternative to
